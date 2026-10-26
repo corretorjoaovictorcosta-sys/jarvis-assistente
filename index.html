@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#07111f">
+<title>J.A.R.V.I.S.</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#07111f;color:#eaf7ff;font-family:Arial,sans-serif}
+header{padding:22px 18px;border-bottom:1px solid #12334a;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:22px;letter-spacing:3px;margin:0;color:#65dcff}
+small{color:#8caabd}
+main{max-width:700px;margin:auto;padding:18px}
+.panel{background:#0b1b2b;border:1px solid #17415b;border-radius:16px;padding:17px;margin:14px 0;box-shadow:0 0 22px #00bfff0a}
+.center{text-align:center}
+.orb{width:112px;height:112px;border:2px solid #55dfff;border-radius:50%;margin:18px auto;display:grid;place-items:center;box-shadow:0 0 30px #00bfff33;color:#70e5ff;font-size:38px}
+button{background:#10344a;color:#eaf7ff;border:1px solid #26799a;border-radius:10px;padding:12px 14px;font-size:15px;cursor:pointer}
+input,textarea{width:100%;padding:13px;margin:7px 0;background:#06111d;color:white;border:1px solid #24506a;border-radius:9px;font-size:16px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+#messages{height:230px;overflow:auto;white-space:pre-wrap;color:#d5edf7;font-size:14px;line-height:1.5}
+.metric{font-size:24px;color:#66ddff;margin:7px 0}
+footer{text-align:center;color:#7896a9;padding:22px;font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>J.A.R.V.I.S.</h1><small id="clock">--:--:--</small></header>
+<main>
+<section class="panel center">
+<small>SISTEMA PESSOAL DE ASSISTÊNCIA</small>
+<div class="orb">J</div>
+<h2>À sua disposição.</h2>
+<p id="status"><small>Sistema local iniciado</small></p>
+<div class="row">
+<button onclick="listen()">🎙️ Falar</button>
+<button onclick="speak('Estou à sua disposição. Como posso ajudar?')">🔊 Testar voz</button>
+</div>
+</section>
+<section class="panel">
+<h3>Conversa</h3>
+<div id="messages">J.A.R.V.I.S.: Sistema iniciado. Ainda estou na versão inicial local.</div>
+<textarea id="question" rows="2" placeholder="Digite sua mensagem..."></textarea>
+<div class="row">
+<button onclick="send()">Enviar</button>
+<button onclick="document.getElementById('question').value=''">Limpar</button>
+</div>
+</section>
+<section class="panel">
+<h3>Controle financeiro</h3>
+<small>Saldo disponível informado por você (R$)</small>
+<input id="balance" type="number" step="0.01" placeholder="Ex.: 2500">
+<small>Comissões a receber (R$)</small>
+<input id="receivable" type="number" step="0.01" placeholder="Ex.: 3500">
+<small>Meta do carro (R$)</small>
+<input id="goal" type="number" step="100" value="30000">
+<button onclick="saveFinance()">Salvar valores</button>
+<div class="metric" id="summary">Meta do carro: R$ 30.000,00</div>
+<small>Os valores ficam salvos neste navegador. Faça backup antes de limpar os dados do site.</small>
+</section>
+<section class="panel">
+<h3>Configurações de voz</h3>
+<label for="voice">Voz disponível no celular</label>
+<select id="voice" style="width:100%;padding:12px;background:#06111d;color:white;border:1px solid #24506a;border-radius:9px"></select>
+<br><br>
+<button onclick="loadVoices()">Atualizar vozes</button>
+</section>
+</main>
+<footer>J.A.R.V.I.S. • Protótipo pessoal • Versão inicial</footer>
+<script>
+const $=id=>document.getElementById(id);
+function tick(){$('clock').textContent=new Date().toLocaleTimeString('pt-BR')}
+setInterval(tick,1000);tick();
+function loadVoices(){
+ const select=$('voice');select.innerHTML='';
+ const voices=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith('pt'));
+ voices.forEach(v=>{let o=document.createElement('option');o.value=v.name;o.textContent=v.name+' ('+v.lang+')';select.appendChild(o)});
+ if(!voices.length){let o=document.createElement('option');o.textContent='Nenhuma voz em português encontrada';select.appendChild(o)}
+}
+if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices}
+function speak(text){
+ if(!('speechSynthesis'in window)){alert('Voz não suportada neste navegador.');return}
+ const u=new SpeechSynthesisUtterance(text);u.lang='pt-BR';u.rate=.92;
+ const v=speechSynthesis.getVoices().find(v=>v.name===$('voice').value);
+ if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u)
+}
+function addMessage(text){$('messages').textContent+='\n\n'+text;$('messages').scrollTop=$('messages').scrollHeight}
+function send(){
+ const q=$('question').value.trim();if(!q)return;
+ addMessage('Você: '+q);
+ let a='Ainda não estou conectado a uma IA online. Por enquanto, posso testar a interface e a voz. A conexão inteligente será configurada na próxima etapa.';
+ if(/hora|horas/i.test(q))a='Agora são '+new Date().toLocaleTimeString('pt-BR')+'.';
+ if(/data|dia de hoje/i.test(q))a='Hoje é '+new Date().toLocaleDateString('pt-BR')+'.';
+ addMessage('J.A.R.V.I.S.: '+a);$('question').value='';speak(a)
+}
+function listen(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){alert('Reconhecimento de voz não disponível. Use o Chrome e permita o microfone.');return}
+ const r=new SR();r.lang='pt-BR';r.onstart=()=>$('status').textContent='Estou ouvindo...';
+ r.onresult=e=>{$('question').value=e.results[0][0].transcript;send()};
+ r.onerror=()=>{$('status').textContent='Não consegui ouvir. Verifique a permissão do microfone.'};
+ r.onend=()=>$('status').textContent='Sistema local iniciado';r.start()
+}
+function money(n){return Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function saveFinance(){
+ const d={balance:$('balance').value,receivable:$('receivable').value,goal:$('goal').value};
+ localStorage.setItem('jarvisFinance',JSON.stringify(d));renderFinance();alert('Valores salvos neste navegador.')
+}
+function renderFinance(){
+ const d=JSON.parse(localStorage.getItem('jarvisFinance')||'{}');
+ if(d.balance!==undefined)$('balance').value=d.balance;
+ if(d.receivable!==undefined)$('receivable').value=d.receivable;
+ if(d.goal!==undefined)$('goal').value=d.goal;
+ $('summary').textContent='Saldo: '+money($('balance').value)+' • A receber: '+money($('receivable').value)+' • Meta: '+money($('goal').value);
+}
+renderFinance();
+</script>
+</body>
+</html>
